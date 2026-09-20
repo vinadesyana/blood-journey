@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#C0392B">
+<title>Blood Journey: Misi Sel Darah Merah</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  :root {
+    --red-blood: #C0392B;
+    --red-bright: #E74C3C;
+    --blue-dark: #2C3E50;
+    --blue-deep: #1A252F;
+    --gold: #F39C12;
+    --cream: #FDF6E3;
+    --green: #27AE60;
+    --gray: #7F8C8D;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'Nunito', -apple-system, sans-serif;
+    background: #000;
+    color: #fff;
+    touch-action: none;
+  }
+
+  #app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1A252F 0%, #2C3E50 100%);
+  }
+
+  /* ============ SCREENS ============ */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    z-index: 10;
+  }
+  .screen.active { display: flex; }
+
+  /* ============ MENU SCREEN ============ */
+  #menuScreen {
+    background: radial-gradient(circle at 50% 30%, #8B1A1A 0%, #2C3E50 70%);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .logo-container {
+    text-align: center;
+    margin-bottom: 20px;
+    animation: floatY 3s ease-in-out infinite;
+  }
+
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .blood-cell-logo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FF6B6B, #C0392B 60%, #7B1F1F);
+    box-shadow: 0 0 40px rgba(231, 76, 60, 0.7), inset -10px -10px 20px rgba(0,0,0,0.3);
+    margin: 0 auto 15px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+  }
+
+  .blood-cell-logo::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255,255,255,0.3);
+    animation: spin 8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .game-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 3px 0 #7B1F1F, 0 0 20px rgba(231,76,60,0.8);
+    letter-spacing: 1px;
+    line-height: 1.2;
+  }
+
+  .game-subtitle {
+    font-size: 13px;
+    color: #FDF6E3;
+    opacity: 0.9;
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  .menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
+    margin-top: 30px;
+  }
+
+  .btn {
+    padding: 14px 20px;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #E74C3C, #C0392B);
+    color: #fff;
+    box-shadow: 0 4px 0 #7B1F1F, 0 6px 15px rgba(231,76,60,0.4);
+  }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, #F39C12, #E67E22);
+    color: #fff;
+    box-shadow: 0 4px 0 #A0520A;
+  }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+
+  .player-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 10px 16px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ============ GAME SCREEN ============ */
+  #gameScreen {
+    background: #000;
+  }
+
+  #webglCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* HUD */
+  .hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 20;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .hud-pill {
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .hud-hearts { color: #E74C3C; letter-spacing: 1px; }
+  .hud-oxygen { color: #FDF6E3; }
+  .hud-score { color: var(--gold); }
+
+  .hud-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .hemoglobin-bar {
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .hemoglobin-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    margin-bottom: 4px;
+    font-weight: 700;
+    color: #FDF6E3;
+  }
+
+  .bar-track {
+    height: 10px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #E74C3C, #F39C12, #27AE60);
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 6px;
+  }
+
+  .level-info {
+    text-align: center;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  /* Controls */
+  .controls {
+    position: absolute;
+    bottom: 90px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    pointer-events: auto;
+    z-index: 25;
+  }
+
+  .ctrl-btn {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s;
+    touch-action: none;
+  }
+
+  .ctrl-btn:active, .ctrl-btn.pressed {
+    transform: scale(0.9);
+    background: rgba(231,76,60,0.5);
+  }
+
+  .pause-btn {
+    pointer-events: auto;
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  /* Dialogue bubble */
+  .dialogue {
+    position: absolute;
+    top: 70px;
+    left: 12px;
+    right: 12px;
+    background: rgba(253, 246, 227, 0.97);
+    color: #2C3E50;
+    border-radius: 16px;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    z-index: 30;
+    transform: translateY(-140%);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    border-left: 5px solid var(--red-blood);
+  }
+
+  .dialogue.show { transform: translateY(0); }
+
+  .dialogue::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 30px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid rgba(253, 246, 227, 0.97);
+  }
+
+  /* ============ QUIZ MODAL ============ */
+  .modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+
+  .modal.active { display: flex; }
+
+  .quiz-card {
+    background: linear-gradient(180deg, #FDF6E3, #F5E6C8);
+    border-radius: 20px;
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+    color: #2C3E50;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 4px var(--red-blood);
+    animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .quiz-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--red-blood);
+  }
+
+  .quiz-question {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    color: #2C3E50;
+  }
+
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .quiz-option {
+    padding: 12px 14px;
+    background: #fff;
+    border: 2px solid #E0D5B7;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: #2C3E50;
+    font-family: inherit;
+  }
+
+  .quiz-option:active { transform: scale(0.98); }
+
+  .quiz-option.correct {
+    background: var(--green);
+    color: #fff;
+    border-color: #1E8449;
+  }
+
+  .quiz-option.wrong {
+    background: #E74C3C;
+    color: #fff;
+    border-color: #A93226;
+  }
+
+  .quiz-option:disabled { cursor: default; }
+
+  .quiz-explanation {
+    margin-top: 14px;
+    padding: 12px;
+    background: rgba(243, 156, 18, 0.15);
+    border-left: 4px solid var(--gold);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #7B5A1A;
+    display: none;
+  }
+
+  .quiz-explanation.show { display: block; }
+
+  .quiz-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .quiz-actions .btn { flex: 1; padding: 12px; font-size: 14px; }
+
+  /* ============ RESULTS SCREEN ============ */
+  #resultScreen {
+    background: radial-gradient(circle at 50% 40%, #8B1A1A 0%, #1A252F 70%);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .result-card {
+    background: rgba(253, 246, 227, 0.97);
+    border-radius: 20px;
+    padding: 24px;
+    color: #2C3E50;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+
+  .result-icon {
+    font-size: 60px;
+    margin-bottom: 10px;
+  }
+
+  .result-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--red-blood);
+    margin-bottom: 6px;
+  }
+
+  .result-subtitle {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 16px;
+  }
+
+  .result-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .result-stat {
+    background: rgba(192, 57, 43, 0.1);
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .result-stat-value {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--red-blood);
+  }
+
+  .result-stat-label {
+    font-size: 10px;
+    color: var(--gray);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  /* ============ LEVEL MAP ============ */
+  #mapScreen {
+    background: linear-gradient(180deg, #1A252F, #2C3E50);
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .map-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .map-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #fff;
+  }
+
+  .level-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 20px;
+  }
+
+  .level-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .level-card.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .level-card.completed {
+    background: rgba(39, 174, 96, 0.15);
+    border-color: var(--green);
+  }
+
+  .level-num {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E74C3C, #C0392B);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(231,76,60,0.4);
+  }
+
+  .level-card.completed .level-num {
+    background: linear-gradient(135deg, #27AE60, #1E8449);
+  }
+
+  .level-card.locked .level-num {
+    background: #555;
+    box-shadow: none;
+  }
+
+  .level-info-text {
+    flex: 1;
+    text-align: left;
+  }
+
+  .level-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2px;
+  }
+
+  .level-desc {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+  }
+
+  .level-status {
+    font-size: 20px;
+  }
+
+  /* ============ LOADING ============ */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: #1A252F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 999;
+    transition: opacity 0.5s;
+  }
+
+  #loading.hide { opacity: 0; pointer-events: none; }
+
+  .loader {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 4px solid rgba(231,76,60,0.2);
+    border-top-color: var(--red-bright);
+    animation: spin 1s linear infinite;
+  }
+
+  /* Toast */
+  .toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    background: rgba(243, 156, 18, 0.95);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 900;
+    font-size: 16px;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--red-blood); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loader"></div>
+  <div style="font-size:13px; color:#FDF6E3; font-weight:700;">Memuat Blood Journey...</div>
+</div>
+
+<div id="app">
+
+  <!-- ============ MENU SCREEN ============ -->
+  <div id="menuScreen" class="screen active">
+    <div class="logo-container">
+      <div class="blood-cell-logo">🩸</div>
+      <div class="game-title">BLOOD JOURNEY</div>
+      <div class="game-subtitle">Misi Sel Darah Merah</div>
+    </div>
+
+    <div class="menu-buttons">
+      <button class="btn btn-primary" id="btnPlay">▶ MULAI PETUALANGAN</button>
+      <button class="btn btn-secondary" id="btnMap">🗺️ PETA PERJALANAN</button>
+      <button class="btn btn-ghost" id="btnHowTo">❓ CARA BERMAIN</button>
+      <button class="btn btn-ghost" id="btnReset">🔄 RESET DATA</button>
+    </div>
+
+    <div class="player-stats">
+      <div class="stat-item">🏆 <span id="menuTotalScore">0</span></div>
+      <div class="stat-item">⭐ <span id="menuLevelsDone">0</span>/7</div>
+      <div class="stat-item">🎖️ <span id="menuBadges">0</span></div>
+    </div>
+  </div>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <div id="gameScreen" class="screen">
+    <canvas id="webglCanvas"></canvas>
+
+    <div class="hud">
+      <div class="hud-top">
+        <div class="hud-pill hud-hearts" id="hudHearts">❤️❤️❤️</div>
+        <div class="hud-pill hud-oxygen">🫧 <span id="hudOxygen">0</span></div>
+        <div class="hud-pill hud-score">🏆 <span id="hudScore">0</span></div>
+        <button class="ctrl-btn pause-btn" id="btnPause">⏸</button>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="level-info" id="hudLevelInfo">Level 1 · Pabrik Oxy</div>
+        <div class="hemoglobin-bar">
+          <div class="hemoglobin-label">
+            <span>🫧 HEMOGLOBIN</span>
+            <span id="hudHbPercent">0%</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" id="hudHbBar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dialogue" id="dialogue"></div>
+
+    <div class="controls">
+      <button class="ctrl-btn" id="btnLeft">◀</button>
+      <button class="ctrl-btn" id="btnJump">▲</button>
+      <button class="ctrl-btn" id="btnRight">▶</button>
+    </div>
+  </div>
+
+  <!-- ============ QUIZ MODAL ============ -->
+  <div class="modal" id="quizModal">
+    <div class="quiz-card">
+      <div class="quiz-header">❓ CHECKPOINT JANTUNG</div>
+      <div class="quiz-question" id="quizQuestion">Pertanyaan...</div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-explanation" id="quizExplanation"></div>
+      <div class="quiz-actions" id="quizActions" style="display:none;">
+        <button class="btn btn-primary" id="btnQuizContinue">LANJUT ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RESULT SCREEN ============ -->
+  <div id="resultScreen" class="screen">
+    <div class="result-card">
+      <div class="result-icon" id="resultIcon">🏆</div>
+      <div class="result-title" id="resultTitle">Level Selesai!</div>
+      <div class="result-subtitle" id="resultSubtitle">Kamu berhasil melewati misi ini</div>
+
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="result-stat-value" id="resultOxygen">0</div>
+          <div class="result-stat-label">Oksigen</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value" id="resultScore">0</div>
+          <div class="result-stat-label">Skor</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value" id="resultQuiz">0/1</div>
+          <div class="result-stat-label">Kuis Benar</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value" id="resultLives">3</div>
+          <div class="result-stat-label">Nyawa Sisa</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="btnResultMenu" style="flex:1; background:#eee; color:#2C3E50; border-color:#ccc;">🏠 MENU</button>
+        <button class="btn btn-primary" id="btnResultNext" style="flex:1;">NEXT ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MAP SCREEN ============ -->
+  <div id="mapScreen" class="screen">
+    <div class="map-header">
+      <button class="btn btn-ghost" id="btnMapBack" style="padding:8px 12px;">◀</button>
+      <div class="map-title">🗺️ Peta Perjalanan Darah</div>
+    </div>
+    <div class="level-list" id="levelList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   BLOOD JOURNEY: MISI SEL DARAH MERAH
+   Game Engine: Three.js (WebGL)
+   Storage: localStorage (JSON)
+   ============================================================ */
+
+/* ============ DATA LEVEL ============ */
+const LEVELS = [
+  {
+    id: 1,
+    name: "Pabrik Oxy",
+    desc: "Sumsum Tulang - Belajar fungsi sel darah merah",
+    location: "Sumsum Tulang",
+    bg: 0x8B1A1A,
+    tubeColor: 0x9B2C2C,
+    duration: 25,
+    oxygenTarget: 15,
+    quiz: {
+      q: "Apa fungsi utama sel darah merah (eritrosit)?",
+      options: [
+        "Mengangkut oksigen ke seluruh tubuh",
+        "Membunuh kuman dan virus",
+        "Membantu pembekuan darah",
+        "Menghasilkan hormon"
+      ],
+      correct: 0,
+      explanation: "Sel darah merah mengandung HEMOGLOBIN yang mengikat oksigen dari paru-paru dan mengedarkannya ke seluruh tubuh."
+    }
+  },
+  {
+    id: 2,
+    name: "Ruang Tunggu",
+    desc: "Jantung Kanan - Mengenal 4 ruang jantung",
+    location: "Atrium & Ventrikel Kanan",
+    bg: 0x6B1010,
+    tubeColor: 0x7B1F1F,
+    duration: 25,
+    oxygenTarget: 15,
+    quiz: {
+      q: "Ruang jantung manakah yang pertama kali dilewati darah kaya CO₂ dari tubuh?",
+      options: [
+        "Ventrikel kiri",
+        "Atrium kanan",
+        "Atrium kiri",
+        "Ventrikel kanan"
+      ],
+      correct: 1,
+      explanation: "Darah miskin O₂ dari seluruh tubuh masuk ke ATRIUM KANAN melalui vena cava (vena besar)."
+    }
+  },
+  {
+    id: 3,
+    name: "Menuju Paru-Paru",
+    desc: "Arteri Pulmonalis - Perbedaan arteri & vena",
+    location: "Arteri Pulmonalis",
+    bg: 0x1A3A5C,
+    tubeColor: 0x2C5F8A,
+    duration: 30,
+    oxygenTarget: 18,
+    quiz: {
+      q: "Apa perbedaan utama antara arteri dan vena?",
+      options: [
+        "Arteri membawa darah keluar dari jantung, vena menuju jantung",
+        "Arteri selalu berwarna biru, vena berwarna merah",
+        "Arteri hanya ada di paru-paru",
+        "Vena tidak memiliki katup"
+      ],
+      correct: 0,
+      explanation: "ARTERI = pembuluh yang membawa darah KELUAR dari jantung. VENA = pembuluh yang membawa darah KEMBALI ke jantung."
+    }
+  },
+  {
+    id: 4,
+    name: "Kota Alveolus",
+    desc: "Paru-Paru - Pertukaran gas O₂ ↔ CO₂",
+    location: "Alveolus Paru-Paru",
+    bg: 0x2C4A6E,
+    tubeColor: 0x4A7BA7,
+    duration: 30,
+    oxygenTarget: 20,
+    quiz: {
+      q: "Di alveolus paru-paru, apa yang terjadi pada sel darah merah?",
+      options: [
+        "Melepas O₂ dan mengikat CO₂",
+        "Mengikat O₂ dan melepas CO₂",
+        "Berubah menjadi sel darah putih",
+        "Membekukan darah"
+      ],
+      correct: 1,
+      explanation: "Di alveolus terjadi DIFUSI: O₂ masuk ke darah (diikat hemoglobin), sedangkan CO₂ dilepas dari darah ke paru-paru untuk dibuang saat menghembuskan napas."
+    }
+  },
+  {
+    id: 5,
+    name: "Kembali ke Jantung",
+    desc: "Vena Pulmonalis - Peredaran darah kecil",
+    location: "Vena Pulmonalis",
+    bg: 0x8B2020,
+    tubeColor: 0xB03030,
+    duration: 25,
+    oxygenTarget: 15,
+    quiz: {
+      q: "Urutan peredaran darah KECIL yang benar adalah...",
+      options: [
+        "Jantung → seluruh tubuh → jantung",
+        "Jantung → paru-paru → jantung",
+        "Paru-paru → seluruh tubuh → paru-paru",
+        "Jantung → hati → jantung"
+      ],
+      correct: 1,
+      explanation: "Peredaran darah KECIL (pendek): Jantung (ventrikel kanan) → Paru-paru → Jantung (atrium kiri). Tujuannya untuk pertukaran gas di paru-paru."
+    }
+  },
+  {
+    id: 6,
+    name: "Ekspedisi Tubuh",
+    desc: "Aorta & Kapiler - Peredaran darah besar",
+    location: "Aorta & Kapiler",
+    bg: 0xA02020,
+    tubeColor: 0xD03030,
+    duration: 35,
+    oxygenTarget: 22,
+    quiz: {
+      q: "Urutan peredaran darah BESAR yang benar adalah...",
+      options: [
+        "Jantung → paru-paru → jantung",
+        "Jantung → seluruh tubuh → jantung",
+        "Tubuh → paru-paru → tubuh",
+        "Jantung → ginjal → paru-paru"
+      ],
+      correct: 1,
+      explanation: "Peredaran darah BESAR (panjang): Jantung (ventrikel kiri) → Aorta → Seluruh tubuh → Vena cava → Jantung (atrium kanan)."
+    }
+  },
+  {
+    id: 7,
+    name: "Pulang ke Rumah",
+    desc: "Vena Cava - Siklus lengkap peredaran darah",
+    location: "Vena Cava",
+    bg: 0x3A1A5C,
+    tubeColor: 0x5A3A8A,
+    duration: 35,
+    oxygenTarget: 25,
+    quiz: {
+      q: "Bagaimana urutan lengkap perjalanan darah dari jantung kembali ke jantung?",
+      options: [
+        "Atrium kanan → ventrikel kanan → paru-paru → atrium kiri → ventrikel kiri → tubuh → atrium kanan",
+        "Atrium kiri → ventrikel kiri → paru-paru → atrium kanan → ventrikel kanan → tubuh",
+        "Ventrikel kanan → tubuh → atrium kanan → paru-paru",
+        "Atrium kanan → paru-paru → ventrikel kanan"
+      ],
+      correct: 0,
+      explanation: "Itulah siklus lengkap! Darah mengalir: Atrium kanan → Ventrikel kanan → Paru-paru (darah kecil) → Atrium kiri → Ventrikel kiri → Seluruh tubuh (darah besar) → Atrium kanan. Siklus berulang!"
+    }
+  }
+];
+
+/* ============ STORAGE MANAGER (JSON) ============ */
+const Storage = {
+  KEY: 'bloodJourneySave_v1',
+
+  defaultData() {
+    return {
+      version: 1,
+      player: {
+        name: "Oxy",
+        totalScore: 0,
+        badges: [],
+        levelsCompleted: [],
+        currentLevel: 1
+      },
+      levels: {},
+      lastPlayed: new Date().toISOString(),
+      settings: {
+        sound: true,
+        vibration: true
+      }
+    };
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (!raw) return this.defaultData();
+      const data = JSON.parse(raw);
+      return { ...this.defaultData(), ...data };
+    } catch (e) {
+      console.warn('Save corrupt, resetting', e);
+      return this.defaultData();
+    }
+  },
+
+  save(data) {
+    try {
+      data.lastPlayed = new Date().toISOString();
+      localStorage.setItem(this.KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Save failed', e);
+    }
+  },
+
+  reset() {
+    localStorage.removeItem(this.KEY);
+  },
+
+  updateLevelResult(levelId, result) {
+    const data = this.load();
+    const key = `level_${levelId}`;
+    const prev = data.levels[key] || { bestScore: 0, stars: 0, completed: false };
+    data.levels[key] = {
+      bestScore: Math.max(prev.bestScore, result.score),
+      stars: Math.max(prev.stars, result.stars),
+      completed: true,
+      oxygenCollected: result.oxygenCollected,
+      quizCorrect: result.quizCorrect,
+      lastPlayed: new Date().toISOString()
+    };
+    if (!data.player.levelsCompleted.includes(levelId)) {
+      data.player.levelsCompleted.push(levelId);
+    }
+    data.player.totalScore = Object.values(data.levels)
+      .reduce((sum, l) => sum + (l.bestScore || 0), 0);
+    this.save(data);
+    return data;
+  }
+};
+
+/* ============ GAME STATE ============ */
+const Game = {
+  canvas: null,
+  renderer: null,
+  scene: null,
+  camera: null,
+  player: null,
+  playerPos: { x: 0, y: 0 },
+  velocity: { x: 0, y: 0 },
+  obstacles: [],
+  oxygenItems: [],
+  particles: [],
+  running: false,
+  paused: false,
+  currentLevel: 1,
+  levelTime: 0,
+  oxygenCollected: 0,
+  score: 0,
+  lives: 3,
+  quizAnswered: false,
+  quizCorrect: false,
+  keys: { left: false, right: false, jump: false },
+  lastSpawn: 0,
+  tubeOffset: 0,
+  scrollSpeed: 2.2,
+  quizShown: false,
+  animationId: null,
+  soundEnabled: true
+};
+
+/* ============ THREE.JS SETUP ============ */
+function initThree() {
+  Game.canvas = document.getElementById('webglCanvas');
+  Game.renderer = new THREE.WebGLRenderer({
+    canvas: Game.canvas,
+    antialias: true,
+    alpha: false
+  });
+  Game.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  resizeRenderer();
+
+  Game.scene = new THREE.Scene();
+  Game.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  Game.camera.position.set(0, 0, 12);
+  Game.camera.lookAt(0, 0, 0);
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  Game.scene.add(ambient);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(5, 10, 7);
+  Game.scene.add(dirLight);
+
+  const pointLight = new THREE.PointLight(0xE74C3C, 1.5, 30);
+  pointLight.position.set(0, 0, 5);
+  Game.scene.add(pointLight);
+
+  // Player (red blood cell)
+  createPlayer();
+
+  // Background blood vessel tube
+  createTube();
+
+  window.addEventListener('resize', () => {
+    resizeRenderer();
+    Game.camera.aspect = window.innerWidth / window.innerHeight;
+    Game.camera.updateProjectionMatrix();
+  });
+}
+
+function resizeRenderer() {
+  const w = Game.canvas.clientWidth || window.innerWidth;
+  const h = Game.canvas.clientHeight || window.innerHeight;
+  Game.renderer.setSize(w, h, false);
+}
+
+function createPlayer() {
+  const group = new THREE.Group();
+
+  // Main red blood cell (biconcave disc shape)
+  const geo = new THREE.SphereGeometry(0.9, 24, 16);
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0xE74C3C,
+    emissive: 0x8B1A1A,
+    emissiveIntensity: 0.4,
+    shininess: 80,
+    flatShading: false
+  });
+  const cell = new THREE.Mesh(geo, mat);
+  cell.scale.set(1, 0.55, 1);
+  group.add(cell);
+
+  // Inner highlight (donut-like indent)
+  const innerGeo = new THREE.SphereGeometry(0.5, 16, 12);
+  const innerMat = new THREE.MeshPhongMaterial({
+    color: 0xC0392B,
+    emissive: 0x6B1010,
+    emissiveIntensity: 0.3
+  });
+  const inner = new THREE.Mesh(innerGeo, innerMat);
+  inner.scale.set(1, 0.5, 1);
+  group.add(inner);
+
+  // Glow ring
+  const ringGeo = new THREE.TorusGeometry(1.05, 0.08, 8, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xFF6B6B,
+    transparent: true,
+    opacity: 0.6
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  group.add(ring);
+  group.userData.ring = ring;
+
+  // Eyes (cute character)
+  const eyeGeo = new THREE.SphereGeometry(0.12, 8, 8);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x1A252F });
+
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(-0.28, 0.15, 0.75);
+  group.add(eyeL);
+  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), pupilMat);
+  pupilL.position.set(-0.28, 0.15, 0.85);
+  group.add(pupilL);
+
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(0.28, 0.15, 0.75);
+  group.add(eyeR);
+  const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), pupilMat);
+  pupilR.position.set(0.28, 0.15, 0.85);
+  group.add(pupilR);
+
+  group.position.set(-3, 0, 0);
+  Game.scene.add(group);
+  Game.player = group;
+}
+
+function createTube() {
+  // Background blood vessel — flowing tube
+  const tubeGroup = new THREE.Group();
+  tubeGroup.userData.isTube = true;
+  Game.scene.add(tubeGroup);
+  Game.tubeGroup = tubeGroup;
+
+  // Create tube segments (rings)
+  for (let i = 0; i < 12; i++) {
+    const z = -i * 3;
+    const ringGeo = new THREE.TorusGeometry(4.5, 0.15, 8, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xFF6B6B,
+      transparent: true,
+      opacity: 0.25 - i * 0.015
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.z = z;
+    tubeGroup.add(ring);
+  }
+
+  // Particles in tube (floating cells in background)
+  for (let i = 0; i < 30; i++) {
+    const pGeo = new THREE.SphereGeometry(0.15 + Math.random() * 0.15, 6, 6);
+    const pMat = new THREE.MeshBasicMaterial({
+      color: Math.random() > 0.5 ? 0xFF8888 : 0xFFAA55,
+      transparent: true,
+      opacity: 0.4 + Math.random() * 0.3
+    });
+    const p = new THREE.Mesh(pGeo, pMat);
+    p.position.set(
+      (Math.random() - 0.5) * 8,
+      (Math.random() - 0.5) * 6,
+      -Math.random() * 30
+    );
+    p.userData.speed = 0.02 + Math.random() * 0.05;
+    tubeGroup.add(p);
+  }
+}
+
+/* ============ SPAWN OBSTACLES & OXYGEN ============ */
+function spawnOxygen() {
+  const geo = new THREE.SphereGeometry(0.3, 12, 12);
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x27AE60,
+    emissive: 0x1E8449,
+    emissiveIntensity: 0.6,
+    shininess: 100
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(
+    (Math.random() - 0.5) * 5,
+    (Math.random() - 0.5) * 4,
+    -25
+  );
+  mesh.userData.type = 'oxygen';
+  mesh.userData.rotSpeed = 0.05;
+
+  // Glow
+  const glowGeo = new THREE.SphereGeometry(0.5, 8, 8);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x2ECC71,
+    transparent: true,
+    opacity: 0.3
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  mesh.add(glow);
+
+  Game.scene.add(mesh);
+  Game.oxygenItems.push(mesh);
+}
+
+function spawnObstacle() {
+  const type = Math.random() > 0.5 ? 'co2' : 'radical';
+  const color = type === 'co2' ? 0x7F8C8D : 0x8E44AD;
+
+  const geo = new THREE.IcosahedronGeometry(0.55, 0);
+  const mat = new THREE.MeshPhongMaterial({
+    color: color,
+    emissive: color,
+    emissiveIntensity: 0.4,
+    flatShading: true
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(
+    (Math.random() - 0.5) * 5,
+    (Math.random() - 0.5) * 4,
+    -25
+  );
+  mesh.userData.type = 'obstacle';
+  mesh.userData.rotSpeed = 0.03;
+  Game.scene.add(mesh);
+  Game.obstacles.push(mesh);
+}
+
+/* ============ INPUT HANDLING ============ */
+function setupControls() {
+  const bindHold = (el, key) => {
+    const press = (e) => {
+      e.preventDefault();
+      Game.keys[key] = true;
+      el.classList.add('pressed');
+    };
+    const release = (e) => {
+      e.preventDefault();
+      Game.keys[key] = false;
+      el.classList.remove('pressed');
+    };
+    el.addEventListener('touchstart', press, { passive: false });
+    el.addEventListener('touchend', release, { passive: false });
+    el.addEventListener('touchcancel', release, { passive: false });
+    el.addEventListener('mousedown', press);
+    el.addEventListener('mouseup', release);
+    el.addEventListener('mouseleave', release);
+  };
+
+  bindHold(document.getElementById('btnLeft'), 'left');
+  bindHold(document.getElementById('btnRight'), 'right');
+  bindHold(document.getElementById('btnJump'), 'jump');
+
+  // Keyboard
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') Game.keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') Game.keys.right = true;
+    if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w') Game.keys.jump = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') Game.keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') Game.keys.right = false;
+    if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w') Game.keys.jump = false;
+  });
+}
+
+/* ============ GAME LOOP ============ */
+let lastTime = 0;
+function gameLoop(time) {
+  if (!Game.running) return;
+  Game.animationId = requestAnimationFrame(gameLoop);
+
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+
+  if (!Game.paused) {
+    updateGame(dt);
+  }
+
+  renderScene();
+}
+
+function updateGame(dt) {
+  // Level timer
+  Game.levelTime += dt;
+  const level = LEVELS[Game.currentLevel - 1];
+
+  // Player movement
+  const speed = 6;
+  if (Game.keys.left) Game.playerPos.x -= speed * dt;
+  if (Game.keys.right) Game.playerPos.x += speed * dt;
+
+  // Boundaries
+  Game.playerPos.x = Math.max(-4, Math.min(4, Game.playerPos.x));
+
+  // Jump physics (simple vertical bounce)
+  if (Game.keys.jump && Game.playerPos.y <= -1.5) {
+    Game.velocity.y = 5.5;
+    vibrate(15);
+  }
+  Game.velocity.y -= 12 * dt;
+  Game.playerPos.y += Game.velocity.y * dt;
+  if (Game.playerPos.y < -1.5) {
+    Game.playerPos.y = -1.5;
+    Game.velocity.y = 0;
+  }
+
+  // Apply to player
+  if (Game.player) {
+    Game.player.position.x = Game.playerPos.x;
+    Game.player.position.y = Game.playerPos.y;
+    Game.player.rotation.x += dt * 1.5;
+    Game.player.rotation.y += dt * 2;
+    if (Game.player.userData.ring) {
+      Game.player.userData.ring.rotation.z += dt * 2;
+    }
+  }
+
+  // Scroll tube background
+  if (Game.tubeGroup) {
+    Game.tubeGroup.children.forEach(c => {
+      c.position.z += Game.scrollSpeed * dt * 8;
+      if (c.position.z > 5) {
+        c.position.z -= 40;
+        if (c.userData.speed) {
+          c.position.x = (Math.random() - 0.5) * 8;
+          c.position.y = (Math.random() - 0.5) * 6;
+        }
+      }
+    });
+  }
+
+  // Spawn items
+  Game.lastSpawn += dt;
+  const spawnInterval = 0.5;
+  if (Game.lastSpawn > spawnInterval) {
+    Game.lastSpawn = 0;
+    if (Math.random() > 0.35) spawnOxygen();
+    if (Math.random() > 0.5) spawnObstacle();
+  }
+
+  // Move items
+  const itemSpeed = Game.scrollSpeed * 4;
+
+  // Oxygen items
+  for (let i = Game.oxygenItems.length - 1; i >= 0; i--) {
+    const o = Game.oxygenItems[i];
+    o.position.z += itemSpeed * dt;
+    o.rotation.y += 0.05;
+    o.rotation.x += 0.03;
+
+    // Collision with player
+    const dx = o.position.x - Game.player.position.x;
+    const dy = o.position.y - Game.player.position.y;
+    const dz = o.position.z - Game.player.position.z;
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    if (dist < 1.2) {
+      // Collect!
+      Game.oxygenCollected++;
+      Game.score += 10;
+      updateHUD();
+      vibrate(10);
+      playBeep(880, 0.08);
+      Game.scene.remove(o);
+      Game.oxygenItems.splice(i, 1);
+      continue;
+    }
+
+    // Remove if passed
+    if (o.position.z > 8) {
+      Game.scene.remove(o);
+      Game.oxygenItems.splice(i, 1);
+    }
+  }
+
+  // Obstacles
+  for (let i = Game.obstacles.length - 1; i >= 0; i--) {
+    const ob = Game.obstacles[i];
+    ob.position.z += itemSpeed * dt;
+    ob.rotation.x += 0.03;
+    ob.rotation.z += 0.04;
+
+    // Collision
+    const dx = ob.position.x - Game.player.position.x;
+    const dy = ob.position.y - Game.player.position.y;
+    const dz = ob.position.z - Game.player.position.z;
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    if (dist < 1.2 && !ob.userData.hit) {
+      ob.userData.hit = true;
+      Game.lives--;
+      updateHUD();
+      vibrate(80);
+      playBeep(180, 0.2);
+      showToast("💥 -1 ❤️");
+      // Visual feedback
+      Game.player.userData.hitFlash = 0.3;
+      if (Game.lives <= 0) {
+        endLevel(false);
+        return;
+      }
+    }
+
+    if (ob.position.z > 8) {
+      Game.scene.remove(ob);
+      Game.obstacles.splice(i, 1);
+    }
+  }
+
+  // Hit flash effect
+  if (Game.player.userData.hitFlash > 0) {
+    Game.player.userData.hitFlash -= dt;
+    const flash = Math.sin(Game.player.userData.hitFlash * 40) > 0;
+    Game.player.children[0].material.emissive.setHex(flash ? 0xFFFFFF : 0x8B1A1A);
+  }
+
+  // Update HUD
+  updateHUD();
+
+  // Check win condition
+  if (Game.oxygenCollected >= level.oxygenTarget && !Game.quizShown) {
+    Game.quizShown = true;
+    showQuiz();
+  }
+
+  // Time out
+  if (Game.levelTime > level.duration && !Game.quizShown) {
+    endLevel(false);
+  }
+}
+
+function renderScene() {
+  if (Game.renderer && Game.scene && Game.camera) {
+    Game.renderer.render(Game.scene, Game.camera);
+  }
+}
+
+/* ============ HUD UPDATE ============ */
+function updateHUD() {
+  const hearts = '❤️'.repeat(Math.max(0, Game.lives)) + '🖤'.repeat(Math.max(0, 3 - Game.lives));
+  document.getElementById('hudHearts').textContent = hearts;
+  document.getElementById('hudOxygen').textContent = Game.oxygenCollected;
+  document.getElementById('hudScore').textContent = Game.score;
+
+  const level = LEVELS[Game.currentLevel - 1];
+  const pct = Math.min(100, (Game.oxygenCollected / level.oxygenTarget) * 100);
+  document.getElementById('hudHbBar').style.width = pct + '%';
+  document.getElementById('hudHbPercent').textContent = Math.round(pct) + '%';
+  document.getElementById('hudLevelInfo').textContent = `Level ${Game.currentLevel} · ${level.name}`;
+}
+
+/* ============ QUIZ ============ */
+function showQuiz() {
+  Game.paused = true;
+  const level = LEVELS[Game.currentLevel - 1];
+  const quiz = level.quiz;
+
+  document.getElementById('quizQuestion').textContent = quiz.q;
+  const optionsEl = document.getElementById('quizOptions');
+  optionsEl.innerHTML = '';
+
+  quiz.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = String.fromCharCode(65 + idx) + '. ' + opt;
+    btn.addEventListener('click', () => answerQuiz(idx, quiz.correct, quiz.explanation));
+    optionsEl.appendChild(btn);
+  });
+
+  document.getElementById('quizExplanation').classList.remove('show');
+  document.getElementById('quizActions').style.display = 'none';
+  document.getElementById('quizModal').classList.add('active');
+}
+
+function answerQuiz(selected, correct, explanation) {
+  const options = document.querySelectorAll('.quiz-option');
+  options.forEach((btn, idx) => {
+    btn.disabled = true;
+    if (idx === correct) btn.classList.add('correct');
+    else if (idx === selected) btn.classList.add('wrong');
+  });
+
+  Game.quizCorrect = selected === correct;
+  if (Game.quizCorrect) {
+    Game.score += 50;
+    vibrate(30);
+    playBeep(1200, 0.15);
+  } else {
+    playBeep(220, 0.3);
+  }
+
+  document.getElementById('quizExplanation').textContent = '💡 ' + explanation;
+  document.getElementById('quizExplanation').classList.add('show');
+  document.getElementById('quizActions').style.display = 'flex';
+}
+
+/* ============ LEVEL MANAGEMENT ============ */
+function startLevel(levelId) {
+  Game.currentLevel = levelId;
+  Game.levelTime = 0;
+  Game.oxygenCollected = 0;
+  Game.score = 0;
+  Game.lives = 3;
+  Game.quizShown = false;
+  Game.quizCorrect = false;
+  Game.paused = false;
+  Game.running = true;
+  Game.playerPos = { x: 0, y: -1.5 };
+  Game.velocity = { x: 0, y: 0 };
+  Game.lastSpawn = 0;
+
+  // Clear scene items
+  Game.oxygenItems.forEach(o => Game.scene.remove(o));
+  Game.obstacles.forEach(o => Game.scene.remove(o));
+  Game.oxygenItems = [];
+  Game.obstacles = [];
+
+  // Reset player
+  if (Game.player) {
+    Game.player.position.set(0, -1.5, 0);
+  }
+
+  // Update level bg color
+  const level = LEVELS[levelId - 1];
+  Game.scene.background = new THREE.Color(level.bg);
+  Game.scene.fog = new THREE.Fog(level.bg, 15, 40);
+
+  // Update HUD
+  updateHUD();
+  showDialogue(getLevelIntro(levelId));
+  hideScreens();
+  showScreen('gameScreen');
+
+  // Start loop
+  lastTime = performance.now();
+  if (Game.animationId) cancelAnimationFrame(Game.animationId);
+  Game.animationId = requestAnimationFrame(gameLoop);
+
+  playBeep(660, 0.1);
+  vibrate(20);
+}
+
+function getLevelIntro(levelId) {
+  const intros = [
+    "Hai! Aku Oxy! Aku baru lahir di sumsum tulang. Ayo kumpulkan oksigen untuk tubuh! 🩸",
+    "Kita tiba di jantung kanan! Darah kaya CO₂ masuk ke atrium kanan. Siap? 💓",
+    "Lewati arteri pulmonalis! Ingat: arteri membawa darah KELUAR dari jantung. 🫁",
+    "Selamat datang di alveolus! Di sini kita tukar CO₂ dengan O₂ segar. 🌬️",
+    "Kembali ke jantung lewat vena pulmonalis. Darah kita sekarang kaya oksigen! ✨",
+    "Waktunya ekspedisi ke seluruh tubuh! Lewati aorta dan kapiler. 💪",
+    "Misi terakhir! Kembali ke jantung lewat vena cava. Kamu hebat! 🏆"
+  ];
+  return intros[levelId - 1] || intros[0];
+}
+
+function endLevel(success) {
+  Game.running = false;
+  Game.paused = true;
+  if (Game.animationId) cancelAnimationFrame(Game.animationId);
+
+  const level = LEVELS[Game.currentLevel - 1];
+  const stars = success ? (Game.quizCorrect ? 3 : 2) : 1;
+  const finalScore = Game.score + (success ? 100 : 0);
+
+  if (success) {
+    Storage.updateLevelResult(Game.currentLevel, {
+      score: finalScore,
+      stars: stars,
+      oxygenCollected: Game.oxygenCollected,
+      quizCorrect: Game.quizCorrect
+    });
+  }
+
+  // Show result
+  document.getElementById('resultIcon').textContent = success ? (stars === 3 ? '🏆' : '🥈') : '💔';
+  document.getElementById('resultTitle').textContent = success ? 'Misi Selesai!' : 'Misi Gagal';
+  document.getElementById('resultSubtitle').textContent = success
+    ? `${level.name} berhasil dilewati!`
+    : 'Coba lagi ya, Oxy!';
+
+  document.getElementById('resultOxygen').textContent = Game.oxygenCollected;
+  document.getElementById('resultScore').textContent = finalScore;
+  document.getElementById('resultQuiz').textContent = Game.quizCorrect ? '1/1' : '0/1';
+  document.getElementById('resultLives').textContent = Math.max(0, Game.lives);
+
+  const nextBtn = document.getElementById('btnResultNext');
+  if (success && Game.currentLevel < LEVELS.length) {
+    nextBtn.textContent = 'NEXT ▶';
+    nextBtn.dataset.action = 'next';
+  } else if (success) {
+    nextBtn.textContent = '🏠 SELESAI';
+    nextBtn.dataset.action = 'menu';
+  } else {
+    nextBtn.textContent = '🔄 COBA LAGI';
+    nextBtn.dataset.action = 'retry';
+  }
+
+  showScreen('resultScreen');
+  playBeep(success ? 880 : 200, 0.3);
+}
+
+/* ============ UI NAVIGATION ============ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function hideScreens() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+}
+
+function showDialogue(text, duration = 3500) {
+  const el = document.getElementById('dialogue');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showToast(text, duration = 1200) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+/* ============ AUDIO (Web Audio API) ============ */
+let audioCtx = null;
+function playBeep(freq, duration) {
+  if (!Game.soundEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+function vibrate(ms) {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(ms); } catch (e) {}
+  }
+}
+
+/* ============ MAP RENDERING ============ */
+function renderMap() {
+  const data = Storage.load();
+  const list = document.getElementById('levelList');
+  list.innerHTML = '';
+
+  LEVELS.forEach(level => {
+    const key = `level_${level.id}`;
+    const lvlData = data.levels[key] || {};
+    const isCompleted = lvlData.completed;
+    const isUnlocked = level.id === 1 || data.levels[`level_${level.id - 1}`]?.completed;
+
+    const card = document.createElement('div');
+    card.className = 'level-card' + (isCompleted ? ' completed' : '') + (!isUnlocked ? ' locked' : '');
+    card.innerHTML = `
+      <div class="level-num">${isUnlocked ? level.id : '🔒'}</div>
+      <div class="level-info-text">
+        <div class="level-name">${level.name}</div>
+        <div class="level-desc">${level.desc}</div>
+      </div>
+      <div class="level-status">${isCompleted ? '⭐'.repeat(lvlData.stars || 1) : (isUnlocked ? '▶' : '')}</div>
+    `;
+
+    if (isUnlocked) {
+      card.addEventListener('click', () => {
+        startLevel(level.id);
+      });
+    }
+    list.appendChild(card);
+  });
+}
+
+/* ============ MENU UPDATES ============ */
+function updateMenuStats() {
+  const data = Storage.load();
+  document.getElementById('menuTotalScore').textContent = data.player.totalScore || 0;
+  document.getElementById('menuLevelsDone').textContent = data.player.levelsCompleted.length;
+  document.getElementById('menuBadges').textContent = data.player.badges.length;
+}
+
+/* ============ EVENT BINDINGS ============ */
+function setupMenus() {
+  // Menu buttons
+  document.getElementById('btnPlay').addEventListener('click', () => {
+    const data = Storage.load();
+    const nextLevel = data.player.levelsCompleted.length + 1;
+    const levelToStart = nextLevel > LEVELS.length ? 1 : nextLevel;
+    startLevel(levelToStart);
+  });
+
+  document.getElementById('btnMap').addEventListener('click', () => {
+    renderMap();
+    showScreen('mapScreen');
+  });
+
+  document.getElementById('btnHowTo').addEventListener('click', () => {
+    alert(
+      "🩸 CARA BERMAIN 🩸\n\n" +
+      "1. Kamu adalah Oxy, sel darah merah.\n" +
+      "2. Kumpulkan O₂ (bola hijau) dengan gerak kiri/kanan & lompat.\n" +
+      "3. Hindari CO₂ & radikal bebas (bola abu/ungu).\n" +
+      "4. Setelah cukup O₂, jawab kuis di checkpoint jantung.\n" +
+      "5. Selesaikan 7 misi perjalanan darah!\n\n" +
+      "Kontrol: tombol ◀ ▶ ▲ atau keyboard (A/D/W atau arrow)."
+    );
+  });
+
+  document.getElementById('btnReset').addEventListener('click', () => {
+    if (confirm('Yakin reset semua data? Progress akan hilang.')) {
+      Storage.reset();
+      updateMenuStats();
+      showToast('Data direset!');
+    }
+  });
+
+  // Map back
+  document.getElementById('btnMapBack').addEventListener('click', () => {
+    showScreen('menuScreen');
+    updateMenuStats();
+  });
+
+  // Pause
+  document.getElementById('btnPause').addEventListener('click', () => {
+    Game.paused = !Game.paused;
+    document.getElementById('btnPause').textContent = Game.paused ? '▶' : '⏸';
+    if (Game.paused) showToast('⏸ Paused');
+  });
+
+  // Quiz continue
+  document.getElementById('btnQuizContinue').addEventListener('click', () => {
+    document.getElementById('quizModal').classList.remove('active');
+    Game.paused = false;
+    setTimeout(() => endLevel(true), 300);
+  });
+
+  // Result buttons
+  document.getElementById('btnResultMenu').addEventListener('click', () => {
+    showScreen('menuScreen');
+    updateMenuStats();
+  });
+
+  document.getElementById('btnResultNext').addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    if (action === 'next') {
+      startLevel(Game.currentLevel + 1);
+    } else if (action === 'retry') {
+      startLevel(Game.currentLevel);
+    } else {
+      showScreen('menuScreen');
+      updateMenuStats();
+    }
+  });
+}
+
+/* ============ INIT ============ */
+function init() {
+  initThree();
+  setupControls();
+  setupMenus();
+  updateMenuStats();
+
+  // Hide loading
+  setTimeout(() => {
+    document.getElementById('loading').classList.add('hide');
+  }, 800);
+
+  // Handle visibility
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && Game.running) {
+      Game.paused = true;
+    }
+  });
+}
+
+// Start when DOM ready
+window.addEventListener('DOMContentLoaded', init);
+
+// Prevent context menu / scroll
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('touchmove', e => {
+  if (e.target.closest('.screen')) e.preventDefault();
+}, { passive: false });
+</script>
+
+</body>
+</html>
